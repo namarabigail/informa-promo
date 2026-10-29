@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase-browser";
 
+// Penjaga login untuk semua halaman /admin.
+// Header + menu (Dashboard / Logout) ada di SiteHeader (root layout).
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -15,33 +16,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (!data.session) router.replace("/login");
       else setReady(true);
     });
-    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.replace("/login");
+    const { data: sub } = sb.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") router.replace("/");
     });
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
-  async function keluar() {
-    await getSupabase().auth.signOut();
-    router.replace("/login");
-  }
-
-  if (!ready) {
-    return <main className="p-8 text-gray-500">Memeriksa login...</main>;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/admin" className="font-bold">Admin Promo Informa</Link>
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/" target="_blank" className="text-gray-600 underline">Lihat web publik</Link>
-            <button onClick={keluar} className="border rounded-lg px-3 py-1.5">Keluar</button>
-          </div>
+    <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-5 sm:px-6">
+      {ready ? (
+        children
+      ) : (
+        <div className="space-y-3" aria-busy="true" aria-label="Memeriksa login">
+          <div className="h-8 w-48 animate-pulse rounded-xl bg-line" />
+          <div className="h-24 animate-pulse rounded-2xl bg-line" />
+          <div className="h-24 animate-pulse rounded-2xl bg-line" />
         </div>
-      </header>
-      <div className="max-w-6xl mx-auto px-4 py-6">{children}</div>
+      )}
     </div>
   );
 }
