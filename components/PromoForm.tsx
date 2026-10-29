@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
 import { BUCKET, gambarUrl, pesanError, type Kategori, type Zona } from "@/lib/admin";
 
@@ -67,23 +68,25 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
     init();
   }, [promoId]);
 
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
-
   function toggleZona(id: number) {
     setZonaIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   }
 
+  // Pratinjau dibuat di handler (bukan di effect): baca file jadi data URL
+  function setFileDanPreview(f: File | null) {
+    setFile(f);
+    if (!f) {
+      setPreview(null);
+      return;
+    }
+    const fr = new FileReader();
+    fr.onload = () => setPreview(typeof fr.result === "string" ? fr.result : null);
+    fr.readAsDataURL(f);
+  }
+
   function pilihFile(f: File | null) {
     setError("");
-    if (!f) return setFile(null);
+    if (!f) return setFileDanPreview(null);
     if (!f.type.startsWith("image/")) {
       setError("File harus berupa gambar.");
       return;
@@ -92,7 +95,7 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
       setError(`Ukuran gambar maksimal ${MAKS_MB} MB.`);
       return;
     }
-    setFile(f);
+    setFileDanPreview(f);
     setHapusGambar(false);
   }
 
@@ -164,96 +167,166 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
     }
   }
 
-  if (loading) return <p className="text-gray-500">Memuat...</p>;
+  if (loading) {
+    return (
+      <div className="max-w-2xl space-y-3" aria-busy="true" aria-label="Memuat form">
+        <div className="h-8 w-40 animate-pulse rounded-xl bg-line" />
+        <div className="h-72 animate-pulse rounded-2xl bg-line" />
+      </div>
+    );
+  }
 
   const gambarTampil = preview ?? (!hapusGambar && gambarLama ? gambarUrl(gambarLama) : null);
 
   return (
-    <form onSubmit={simpan} className="bg-white rounded-xl shadow p-6 space-y-5 max-w-2xl">
-      <h1 className="text-xl font-bold">{promoId ? "Edit promo" : "Tambah promo"}</h1>
+    <div className="max-w-2xl space-y-4">
+      <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-ink">
+        <ArrowLeft className="size-4" /> Kembali ke dashboard
+      </Link>
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Kategori <span className="text-red-600">*</span></label>
-        <select
-          value={kategoriId}
-          onChange={(e) => setKategoriId(e.target.value)}
-          required
-          className="w-full border rounded-lg px-3 py-2"
-        >
-          <option value="">Pilih kategori...</option>
-          {kategoriList.map((k) => (
-            <option key={k.nama} value={k.nama}>{k.nama}</option>
-          ))}
-        </select>
-      </div>
+      <form onSubmit={simpan} className="card space-y-5 p-5 sm:p-6">
+        <h1 className="text-2xl font-extrabold tracking-tight">{promoId ? "Edit promo" : "Tambah promo"}</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Mulai <span className="text-red-600">*</span></label>
-          <input type="date" value={mulai} onChange={(e) => setMulai(e.target.value)} required className="w-full border rounded-lg px-3 py-2" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Berakhir</label>
-          <input type="date" value={berakhir} onChange={(e) => setBerakhir(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
-          <p className="text-xs text-gray-500">Kosong = &quot;Selama persediaan masih ada&quot;.</p>
-        </div>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Zona</label>
-        <div className="flex flex-wrap gap-2">
-          {zonaList.filter((z) => z.aktif !== false || zonaIds.includes(z.id)).map((z) => (
-            <label
-              key={z.id}
-              className={`border rounded-full px-3 py-1 text-sm cursor-pointer select-none ${
-                zonaIds.includes(z.id) ? "bg-blue-700 text-white border-blue-700" : "bg-white"
-              }`}
-            >
-              <input type="checkbox" className="sr-only" checked={zonaIds.includes(z.id)} onChange={() => toggleZona(z.id)} />
-              {z.nama}
-            </label>
-          ))}
-        </div>
-        <p className="text-xs text-gray-500">
-          {zonaIds.length === 0 ? "Tidak ada yang dipilih: promo tampil di SEMUA zona." : "Promo hanya tampil di zona yang dipilih."}
-        </p>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Department</label>
-        <input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="contoh: BA - Sofa and Chair" className="w-full border rounded-lg px-3 py-2" />
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium">Deskripsi</label>
-        <textarea value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} rows={4} className="w-full border rounded-lg px-3 py-2" />
-        <p className="text-xs text-gray-500">Isi deskripsi agar promo mudah dicari.</p>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Gambar</label>
-        {gambarTampil && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={gambarTampil} alt="Pratinjau" className="w-full max-w-xs rounded-lg border" />
-        )}
-        <input type="file" accept="image/*" onChange={(e) => pilihFile(e.target.files?.[0] ?? null)} className="block text-sm" />
-        {gambarLama && !file && (
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={hapusGambar} onChange={(e) => setHapusGambar(e.target.checked)} />
-            Hapus gambar saat ini
+        <div>
+          <label className="label" htmlFor="kategori">
+            Kategori <span className="text-red-600">*</span>
           </label>
+          <select
+            id="kategori"
+            value={kategoriId}
+            onChange={(e) => setKategoriId(e.target.value)}
+            required
+            className="input"
+          >
+            <option value="">Pilih kategori...</option>
+            {kategoriList.map((k) => (
+              <option key={k.nama} value={k.nama}>
+                {k.nama}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="label" htmlFor="mulai">
+              Mulai <span className="text-red-600">*</span>
+            </label>
+            <input id="mulai" type="date" value={mulai} onChange={(e) => setMulai(e.target.value)} required className="input" />
+          </div>
+          <div>
+            <label className="label" htmlFor="berakhir">
+              Berakhir
+            </label>
+            <input id="berakhir" type="date" value={berakhir} onChange={(e) => setBerakhir(e.target.value)} className="input" />
+            <p className="hint">Kosong = &quot;Selama persediaan masih ada&quot;.</p>
+          </div>
+        </div>
+
+        <div>
+          <span className="label">Zona</span>
+          <div className="flex flex-wrap gap-2">
+            {zonaList
+              .filter((z) => z.aktif !== false || zonaIds.includes(z.id))
+              .map((z) => (
+                <label
+                  key={z.id}
+                  className={`chip select-none focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${
+                    zonaIds.includes(z.id) ? "chip-aktif" : ""
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={zonaIds.includes(z.id)}
+                    onChange={() => toggleZona(z.id)}
+                  />
+                  {z.nama}
+                </label>
+              ))}
+          </div>
+          <p className="hint">
+            {zonaIds.length === 0
+              ? "Tidak ada yang dipilih: promo tampil di SEMUA zona."
+              : "Promo hanya tampil di zona yang dipilih."}
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="department">
+            Department
+          </label>
+          <input
+            id="department"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            placeholder="contoh: BA - Sofa and Chair"
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label className="label" htmlFor="deskripsi">
+            Deskripsi
+          </label>
+          <textarea
+            id="deskripsi"
+            value={deskripsi}
+            onChange={(e) => setDeskripsi(e.target.value)}
+            rows={4}
+            className="input"
+          />
+          <p className="hint">Isi deskripsi agar promo mudah dicari.</p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="gambar">
+            Gambar
+          </label>
+          {gambarTampil && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={gambarTampil}
+              alt="Pratinjau"
+              className="mb-3 max-h-64 w-auto max-w-full rounded-xl border border-line object-contain"
+            />
+          )}
+          <input
+            id="gambar"
+            type="file"
+            accept="image/*"
+            onChange={(e) => pilihFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-sm file:mr-3 file:cursor-pointer file:rounded-xl file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+          />
+          {gambarLama && !file && (
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-ink"
+                checked={hapusGambar}
+                onChange={(e) => setHapusGambar(e.target.checked)}
+              />
+              Hapus gambar saat ini
+            </label>
+          )}
+          <p className="hint">Maksimal {MAKS_MB} MB. Kalau kosong, web memakai tampilan berwarna sesuai kategori.</p>
+        </div>
+
+        {error && (
+          <p role="alert" className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">
+            {error}
+          </p>
         )}
-        <p className="text-xs text-gray-500">Maksimal {MAKS_MB} MB. Kalau kosong, web memakai placeholder berwarna.</p>
-      </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-
-      <div className="flex gap-3">
-        <button type="submit" disabled={saving} className="bg-blue-700 text-white rounded-lg px-5 py-2 font-medium disabled:opacity-60">
-          {saving ? "Menyimpan..." : "Simpan"}
-        </button>
-        <Link href="/admin" className="border rounded-lg px-5 py-2">Batal</Link>
-      </div>
-    </form>
+        <div className="flex gap-3">
+          <button type="submit" disabled={saving} className="btn btn-primary">
+            {saving ? "Menyimpan..." : "Simpan"}
+          </button>
+          <Link href="/admin" className="btn btn-ghost">
+            Batal
+          </Link>
+        </div>
+      </form>
+    </div>
   );
 }

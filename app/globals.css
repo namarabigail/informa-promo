@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme static {
+  --color-page: #f1f4f8;
+  --color-surface: #ffffff;
+  --color-ink: #131b2b;
+  --color-muted: #5a6a7e;
+  --color-line: #e2e8f0;
+  --shadow-card: 0 1px 2px rgb(19 27 43 / 0.04), 0 6px 20px rgb(19 27 43 / 0.06);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
+  /* Warna aksen (chip aktif, fokus input, dropdown). Halaman zona menimpanya dengan warna zona. */
+  --aksen: var(--color-ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--aksen);
+  outline-offset: 2px;
+}
+
+/* ===== Komponen dasar yang dipakai di semua halaman ===== */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-[15px] outline-none transition placeholder:text-muted/70;
+  }
+  .input:focus {
+    border-color: var(--aksen);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--aksen) 18%, transparent);
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold;
+  }
+  .hint {
+    @apply mt-1.5 text-xs text-muted;
+  }
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply bg-ink text-white hover:bg-ink/90;
+  }
+  .btn-ghost {
+    @apply border border-line bg-surface text-ink hover:bg-page;
+  }
+  .btn-danger {
+    @apply border border-red-200 bg-surface text-red-600 hover:bg-red-50;
+  }
+  .chip {
+    @apply inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-medium transition hover:bg-page;
+  }
+  .chip-aktif,
+  .chip-aktif:hover {
+    color: #fff;
+    background: var(--aksen);
+    border-color: var(--aksen);
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.animate-sheet {
+  animation: sheet-up 0.22s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet {
+    animation: none;
+  }
 }
