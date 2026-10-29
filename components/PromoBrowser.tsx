@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SearchX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Promo, cocok, gambarUrl, periode, sisaHari } from "@/lib/promo";
+import { type Promo, cocok } from "@/lib/promo";
+import Dropdown from "@/components/Dropdown";
+import KartuPromo from "@/components/KartuPromo";
+import PromoDetail from "@/components/PromoDetail";
+import SearchBar from "@/components/SearchBar";
 
 type Props = {
   zonaId?: number; // kosong = semua zona (dipakai di landing)
-  query?: string; // kalau diisi, search dikontrol parent (landing)
+  query?: string;
   onReset?: () => void;
 };
 
@@ -60,200 +65,93 @@ export default function PromoBrowser({ zonaId, query, onReset }: Props) {
     onReset?.();
   }
 
-  if (error) return <pre className="p-4 text-red-600">{error}</pre>;
-  if (!all) return <p className="py-8 text-center opacity-60">Memuat promo…</p>;
+  if (error) {
+    return <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">Gagal memuat promo: {error}</p>;
+  }
+
+  if (!all) {
+    return (
+      <div className="space-y-3" aria-busy="true" aria-label="Memuat promo">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-[10.5rem] animate-pulse rounded-3xl bg-line" />
+        ))}
+      </div>
+    );
+  }
+
+  const pesanKosong =
+    all.length === 0
+      ? zonaId
+        ? "Belum ada promo di zona ini"
+        : "Promo baru segera hadir"
+      : q.trim()
+      ? `Tidak ada promo untuk “${q.trim()}”`
+      : "Tidak ada promo dengan filter ini";
 
   return (
     <div className="space-y-4">
       {query === undefined && (
-        <input
-          value={qLocal}
-          onChange={(e) => setQLocal(e.target.value)}
-          placeholder="Cari promo di zona ini…"
-          className="w-full rounded-xl border px-4 py-3"
-        />
+        <SearchBar value={qLocal} onChange={setQLocal} placeholder="Cari promo di zona ini…" />
       )}
 
       {all.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip aktif={!kategori} onClick={() => setKategori(null)}>
+        <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          <button
+            type="button"
+            onClick={() => setKategori(null)}
+            className={`chip ${!kategori ? "chip-aktif" : ""}`}
+          >
             Semua
-          </Chip>
+          </button>
           {kategoriList.map(([nama, warna]) => (
-            <Chip
+            <button
               key={nama}
-              aktif={kategori === nama}
-              warna={warna}
+              type="button"
               onClick={() => setKategori(kategori === nama ? null : nama)}
+              className={`chip ${kategori === nama ? "chip-aktif" : ""}`}
+              style={kategori === nama ? { background: warna, borderColor: warna } : undefined}
             >
               {nama}
-            </Chip>
+            </button>
           ))}
+        </div>
+      )}
+
+      {all.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted">{hasil.length} promo</p>
           {deptList.length > 0 && (
-            <select
+            <Dropdown
+              label="Department"
               value={dept}
-              onChange={(e) => setDept(e.target.value)}
-              className="rounded-full border px-3 py-1.5 text-sm"
-            >
-              <option value="">Semua department</option>
-              {deptList.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              onChange={setDept}
+              opsi={[{ value: "", label: "Semua department" }, ...deptList.map((d) => ({ value: d, label: d }))]}
+            />
           )}
         </div>
       )}
 
       {hasil.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-lg font-semibold">
-            {all.length === 0
-              ? zonaId
-                ? "Belum ada promo di zona ini"
-                : "Promo baru segera hadir"
-              : q.trim()
-              ? `Tidak ada promo untuk “${q.trim()}”`
-              : "Tidak ada promo dengan filter ini"}
-          </p>
+        <div className="flex flex-col items-center gap-3 py-14 text-center">
+          <span className="grid size-14 place-items-center rounded-full bg-surface text-muted shadow-card">
+            <SearchX className="size-7" />
+          </span>
+          <p className="text-lg font-bold">{pesanKosong}</p>
           {all.length > 0 && (
-            <button onClick={reset} className="mt-3 rounded-full border px-4 py-2 text-sm">
-              Reset pencarian & filter
+            <button type="button" onClick={reset} className="btn btn-ghost">
+              Reset pencarian &amp; filter
             </button>
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {hasil.map((p) => (
-            <Kartu key={p.id} p={p} onClick={() => setDipilih(p)} />
+            <KartuPromo key={p.id} p={p} tampilZona={!zonaId} onClick={() => setDipilih(p)} />
           ))}
         </div>
       )}
 
-      {dipilih && <Detail p={dipilih} onClose={() => setDipilih(null)} />}
-    </div>
-  );
-}
-
-function Chip({
-  aktif,
-  warna,
-  onClick,
-  children,
-}: {
-  aktif: boolean;
-  warna?: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-sm ${aktif ? "text-white" : ""}`}
-      style={aktif ? { background: warna ?? "#111", borderColor: warna ?? "#111" } : undefined}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Gambar({ p, className }: { p: Promo; className: string }) {
-  const [gagal, setGagal] = useState(false);
-  const url = gambarUrl(p.gambar_path);
-  if (url && !gagal) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={p.kategori} onError={() => setGagal(true)} className={className} />;
-  }
-  // Placeholder: blok warna kategori + inisial
-  return (
-    <div className={`${className} flex items-center justify-center bg-black/20 text-5xl font-bold text-white/80`}>
-      {p.kategori.charAt(0)}
-    </div>
-  );
-}
-
-function ZonaBadge({ p }: { p: Promo }) {
-  return (
-    <span className="rounded-full bg-white/20 px-2 py-0.5">
-      {p.semua_zona ? "Semua Zona" : p.zona_names.join(", ")}
-    </span>
-  );
-}
-
-function Kartu({ p, onClick }: { p: Promo; onClick: () => void }) {
-  const sisa = sisaHari(p);
-  return (
-    <button
-      onClick={onClick}
-      className="overflow-hidden rounded-2xl text-left text-white shadow transition hover:-translate-y-0.5"
-      style={{ background: p.warna }}
-    >
-      <Gambar p={p} className="h-40 w-full object-cover" />
-      <div className="space-y-2 p-4">
-        {p.deskripsi && <div className="text-sm opacity-90">{p.kategori}</div>}
-        <div className="line-clamp-3 whitespace-pre-line text-lg font-bold">
-          {p.deskripsi ?? p.kategori}
-        </div>
-        <div className="flex flex-wrap gap-1.5 text-xs">
-          {p.department && <span className="rounded-full bg-white/20 px-2 py-0.5">{p.department}</span>}
-          <ZonaBadge p={p} />
-        </div>
-        <div className="text-xs opacity-90">{periode(p)}</div>
-        {sisa && <div className="text-xs font-semibold">⏳ {sisa}</div>}
-      </div>
-    </button>
-  );
-}
-
-function Detail({ p, onClose }: { p: Promo; onClose: () => void }) {
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [onClose]);
-
-  const sisa = sisaHari(p);
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl bg-white text-black"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Gambar p={p} className="h-56 w-full object-cover" />
-        <div className="space-y-3 p-5">
-          <span
-            className="inline-block rounded-full px-3 py-1 text-sm text-white"
-            style={{ background: p.warna }}
-          >
-            {p.kategori}
-          </span>
-          <p className="whitespace-pre-line text-lg font-bold">
-            {p.deskripsi ?? "Hubungi toko untuk detail promo"}
-          </p>
-          <dl className="space-y-1 text-sm">
-            {p.department && <Baris k="Department" v={p.department} />}
-            <Baris k="Zona" v={p.semua_zona ? "Semua Zona" : p.zona_names.join(", ")} />
-            <Baris k="Periode" v={periode(p)} />
-            {sisa && <Baris k="Status" v={`⏳ ${sisa}`} />}
-          </dl>
-          <button onClick={onClose} className="w-full rounded-xl border py-2.5">
-            Tutup
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Baris({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="w-24 shrink-0 opacity-60">{k}</dt>
-      <dd>{v}</dd>
+      {dipilih && <PromoDetail p={dipilih} onClose={() => setDipilih(null)} />}
     </div>
   );
 }
