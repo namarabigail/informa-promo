@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { EllipsisVertical, LayoutDashboard, LogIn, LogOut, Ticket } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, Menu, Ticket, X } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
 import { PERAN } from "@/lib/admin";
 
@@ -56,17 +56,9 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/85 backdrop-blur">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2.5 font-extrabold tracking-tight">
-          <span className="grid size-8 place-items-center rounded-xl bg-ink text-white">
-            <Ticket className="size-[18px]" />
-          </span>
-          <span>
-            Promo Informa <span className="font-medium text-muted">Depok</span>
-          </span>
-        </Link>
-
-        <div ref={wrapRef} className="relative">
+      <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-2 px-4 sm:px-6">
+        {/* Menu hamburger di kiri */}
+        <div ref={wrapRef} className="relative -ml-2">
           <button
             ref={btnRef}
             type="button"
@@ -76,13 +68,13 @@ export default function SiteHeader() {
             onClick={() => setOpen((v) => !v)}
             className="grid size-10 cursor-pointer place-items-center rounded-full transition hover:bg-page"
           >
-            <EllipsisVertical className="size-5" />
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
 
           {open && (
             <div
               role="menu"
-              className="animate-sheet absolute right-0 top-full mt-2 w-60 rounded-2xl border border-line bg-surface p-1.5 shadow-xl"
+              className="animate-sheet absolute left-0 top-full mt-2 w-64 rounded-2xl border border-line bg-surface p-1.5 shadow-xl"
             >
               {user ? (
                 <>
@@ -114,6 +106,15 @@ export default function SiteHeader() {
             </div>
           )}
         </div>
+
+        <Link href="/" className="flex items-center gap-2.5 font-extrabold tracking-tight">
+          <span className="grid size-8 place-items-center rounded-xl bg-ink text-white">
+            <Ticket className="size-[18px]" />
+          </span>
+          <span>
+            Promo Informa <span className="font-medium text-muted">Depok</span>
+          </span>
+        </Link>
       </div>
     </header>
   );
