@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { EllipsisVertical, LayoutDashboard, LogIn, LogOut, Ticket } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
+import { PERAN } from "@/lib/admin";
 
 const ITEM =
   "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium hover:bg-page";
@@ -53,8 +54,6 @@ export default function SiteHeader() {
     router.refresh();
   }
 
-  const username = user?.email?.split("@")[0];
-
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/85 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
@@ -89,7 +88,7 @@ export default function SiteHeader() {
                 <>
                   <div className="px-3 pb-2 pt-1.5">
                     <p className="text-xs text-muted">Masuk sebagai</p>
-                    <p className="truncate text-sm font-bold">{username}</p>
+                    <p className="truncate text-sm font-bold">{PERAN}</p>
                   </div>
                   <div className="mx-1.5 mb-1 border-t border-line" />
                   <Link href="/admin" role="menuitem" onClick={() => setOpen(false)} className={ITEM}>
@@ -109,7 +108,7 @@ export default function SiteHeader() {
               ) : (
                 <Link href="/login" role="menuitem" onClick={() => setOpen(false)} className={ITEM}>
                   <LogIn className="size-[18px] text-muted" />
-                  Login supervisor
+                  Login {PERAN}
                 </Link>
               )}
             </div>

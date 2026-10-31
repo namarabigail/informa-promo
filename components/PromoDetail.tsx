@@ -10,7 +10,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { type Promo, gambarUrl, periode, sisaHari } from "@/lib/promo";
+import { type Promo, gambarUrl, periode, sisaHari, teksLink, urlAman } from "@/lib/promo";
 import { IkonKategori } from "@/components/Ikon";
 import { latar } from "@/lib/tema";
 
@@ -20,6 +20,7 @@ export default function PromoDetail({ p, onClose }: { p: Promo; onClose: () => v
   const [gagal, setGagal] = useState(false);
   const url = gambarUrl(p.gambar_path);
   const sisa = sisaHari(p);
+  const href = urlAman(p.link);
 
   // Esc untuk menutup + kunci scroll halaman di belakang
   useEffect(() => {
@@ -92,6 +93,19 @@ export default function PromoDetail({ p, onClose }: { p: Promo; onClose: () => v
           <h2 id="judul-promo" className="whitespace-pre-line text-xl font-extrabold leading-snug">
             {p.deskripsi ?? "Hubungi toko untuk detail promo"}
           </h2>
+
+          {/* Link tepat di bawah nama promo, bisa diklik (tab baru) */}
+          {href && (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 rounded-2xl border border-line bg-page px-4 py-3 text-sm font-semibold transition hover:border-ink"
+            >
+              <ExternalLink className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1 truncate underline underline-offset-2">{teksLink(href)}</span>
+            </a>
+          )}
 
           <dl className="space-y-3">
             {p.department && (

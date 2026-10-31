@@ -11,7 +11,7 @@ import SearchBar from "@/components/SearchBar";
 
 type Props = {
   zonaId?: number; // kosong = semua zona (dipakai di landing)
-  query?: string;
+  query?: string; // kalau diisi, search dikontrol parent (landing)
   onReset?: () => void;
 };
 
@@ -30,7 +30,6 @@ export default function PromoBrowser({ zonaId, query, onReset }: Props) {
         if (error) setError(error.message);
         else setAll(data as Promo[]);
       });
-    if (zonaId) localStorage.setItem("zona_terakhir", String(zonaId));
   }, [zonaId]);
 
   const q = query ?? qLocal;
