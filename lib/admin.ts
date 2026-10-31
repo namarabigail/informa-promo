@@ -3,6 +3,12 @@
 // Supabase Auth memakai email. Supervisor cukup mengetik username,
 // lalu kita tambahkan domain ini. Harus sama dengan email user di Supabase.
 export const LOGIN_DOMAIN = "promo-informa.com";
+export const PERAN = "Product Specialist";
+
+export function namaPengguna(u: string | null): string {
+  if (!u) return "-";
+  return u.toLowerCase() === "supervisor" ? PERAN : u;
+}
 
 export const BUCKET = "promo-images";
 
@@ -16,6 +22,7 @@ export type PromoRow = {
   mulai: string;
   berakhir: string | null;
   gambar_path: string | null;
+  link: string | null;
   updated_by: string | null;
   updated_at: string | null;
 };
