@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/supabase-browser";
+import { FeedbackProvider } from "@/components/Feedback";
 
 // Penjaga login untuk semua halaman /admin.
 // Header + menu (Dashboard / Logout) ada di SiteHeader (root layout).
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router]);
 
   return (
+    <FeedbackProvider>
     <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-5 sm:px-6">
       {ready ? (
         children
@@ -34,5 +36,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
     </div>
+    </FeedbackProvider>
   );
 }

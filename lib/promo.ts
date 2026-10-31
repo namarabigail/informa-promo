@@ -9,6 +9,7 @@ export type Promo = {
   department: string | null;
   deskripsi: string | null;
   gambar_path: string | null;
+  link: string | null; // link produk/promo (opsional)
   mulai: string | null; // format YYYY-MM-DD
   berakhir: string | null; // format YYYY-MM-DD
   zona_ids: number[];
@@ -90,4 +91,21 @@ export function cocok(p: Promo, q: string): boolean {
     .join(" ")
     .toLowerCase();
   return kata.every((k) => jerami.includes(k));
+}
+
+// ---------- Link ----------
+export function urlAman(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  const dengan = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const u = new URL(dengan);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+export function teksLink(href: string): string {
+  return href.replace(/^https?:\/\//i, "").replace(/\/$/, "");
 }

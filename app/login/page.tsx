@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleAlert, Eye, EyeOff, Ticket } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
-import { LOGIN_DOMAIN } from "@/lib/admin";
+import { LOGIN_DOMAIN, PERAN } from "@/lib/admin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function LoginPage() {
             <Ticket className="size-6" />
           </span>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Login Supervisor</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">Login {PERAN}</h1>
             <p className="text-sm text-muted">Khusus untuk update promo Informa.</p>
           </div>
         </div>

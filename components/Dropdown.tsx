@@ -3,26 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 
-type Opsi = { value: string; label: string };
+type Opsi = { value: string; label: string; warna?: string };
 
 export default function Dropdown({
   label,
   value,
   onChange,
   opsi,
+  variant = "chip",
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   opsi: Opsi[];
+  variant?: "chip" | "field";
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const terpilih = opsi.find((o) => o.value === value) ?? opsi[0];
-  const aktif = value !== "";
+  const field = variant === "field";
+  const terpilih = opsi.find((o) => o.value === value) ?? (field ? undefined : opsi[0]);
+  const aktif = !field && value !== "";
 
   useEffect(() => {
     if (!open) return;
@@ -37,8 +42,10 @@ export default function Dropdown({
     };
     document.addEventListener("pointerdown", luar);
     document.addEventListener("keydown", esc);
-    // Fokus ke pilihan yang sedang aktif
-    panelRef.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    // Fokus ke pilihan aktif (atau pilihan pertama)
+    const panel = panelRef.current;
+    (panel?.querySelector<HTMLElement>('[aria-selected="true"]') ??
+      panel?.querySelector<HTMLElement>('[role="option"]'))?.focus();
     return () => {
       document.removeEventListener("pointerdown", luar);
       document.removeEventListener("keydown", esc);
@@ -68,7 +75,7 @@ export default function Dropdown({
   }
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef} className={`relative ${field ? "w-full" : ""}`}>
       <button
         ref={btnRef}
         type="button"
@@ -76,9 +83,20 @@ export default function Dropdown({
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen((v) => !v)}
-        className={`chip ${aktif ? "chip-aktif" : ""}`}
+        className={
+          field
+            ? "input flex cursor-pointer items-center justify-between gap-2 text-left"
+            : `chip ${aktif ? "chip-aktif" : ""}`
+        }
       >
-        <span className="max-w-[13rem] truncate">{terpilih?.label ?? label}</span>
+        <span className={field ? "flex min-w-0 flex-1 items-center gap-2" : "max-w-[13rem] truncate"}>
+          {field && terpilih?.warna && (
+            <span className="size-3 shrink-0 rounded-full" style={{ background: terpilih.warna }} />
+          )}
+          <span className={`truncate ${field && !terpilih ? "text-muted/70" : ""}`}>
+            {terpilih?.label ?? placeholder ?? label}
+          </span>
+        </span>
         <ChevronDown className={`size-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -91,7 +109,9 @@ export default function Dropdown({
             role="listbox"
             aria-label={label}
             onKeyDown={onKeyDown}
-            className="animate-sheet fixed inset-x-0 bottom-0 z-[60] max-h-[70dvh] overflow-y-auto rounded-t-3xl bg-surface p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-72 sm:w-72 sm:rounded-2xl sm:border sm:border-line sm:p-1.5 sm:pb-1.5"
+            className={`animate-sheet fixed bottom-0 left-0 right-0 z-[60] max-h-[70dvh] overflow-y-auto rounded-t-3xl bg-surface p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:absolute sm:bottom-auto sm:top-full sm:mt-2 sm:max-h-72 sm:rounded-2xl sm:border sm:border-line sm:p-1.5 sm:pb-1.5 ${
+              field ? "sm:left-0 sm:right-0" : "sm:left-auto sm:right-0 sm:w-72"
+            }`}
           >
             <div className="mx-auto mb-1 mt-1 h-1 w-10 rounded-full bg-black/15 sm:hidden" />
             <p className="px-3 pb-1.5 pt-1 text-sm font-bold sm:hidden">{label}</p>
@@ -107,7 +127,10 @@ export default function Dropdown({
                   className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-page sm:py-2.5"
                   style={dipilih ? { background: "color-mix(in srgb, var(--aksen) 12%, white)" } : undefined}
                 >
-                  <span className="min-w-0 flex-1">{o.label}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                    {o.warna && <span className="size-3 shrink-0 rounded-full" style={{ background: o.warna }} />}
+                    <span className="min-w-0">{o.label}</span>
+                  </span>
                   {dipilih && <Check className="size-4 shrink-0" style={{ color: "var(--aksen)" }} />}
                 </button>
               );

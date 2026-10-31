@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
+import Dropdown from "@/components/Dropdown";
+import { useFeedback } from "@/components/Feedback";
+import { urlAman } from "@/lib/promo";
 import { BUCKET, gambarUrl, pesanError, type Kategori, type Zona } from "@/lib/admin";
 
 const MAKS_MB = 3;
@@ -12,6 +15,7 @@ const MAKS_MB = 3;
 // Form tambah (tanpa promoId) dan edit (dengan promoId).
 export default function PromoForm({ promoId }: { promoId?: string }) {
   const router = useRouter();
+  const { toast } = useFeedback();
 
   const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
   const [zonaList, setZonaList] = useState<Zona[]>([]);
@@ -22,6 +26,7 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
   const [kategoriId, setKategoriId] = useState("");
   const [department, setDepartment] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
+  const [link, setLink] = useState("");
   const [mulai, setMulai] = useState("");
   const [berakhir, setBerakhir] = useState("");
   const [zonaIds, setZonaIds] = useState<number[]>([]);
@@ -58,6 +63,7 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
         setKategoriId(p.data.kategori ?? "");
         setDepartment(p.data.department ?? "");
         setDeskripsi(p.data.deskripsi ?? "");
+        setLink(p.data.link ?? "");
         setMulai(p.data.mulai ?? "");
         setBerakhir(p.data.berakhir ?? "");
         setGambarLama(p.data.gambar_path ?? null);
@@ -107,6 +113,8 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
     if (!kat) return setError("Pilih kategori dulu.");
     if (!mulai) return setError("Tanggal mulai wajib diisi.");
     if (berakhir && berakhir < mulai) return setError("Tanggal berakhir tidak boleh sebelum tanggal mulai.");
+    const linkRapi = urlAman(link);
+    if (link.trim() && !linkRapi) return setError("Link tidak valid. Contoh: https://www.informa.co.id/promo");
 
     setSaving(true);
     try {
@@ -132,6 +140,7 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
         kategori: kat.nama,
         department: department.trim() || null,
         deskripsi: deskripsi.trim() || null,
+        link: linkRapi,
         mulai,
         berakhir: berakhir || null,
         gambar_path,
@@ -159,10 +168,13 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
         if (ins.error) throw ins.error;
       }
 
+      toast(promoId ? "Promo berhasil diperbarui." : "Promo berhasil ditambahkan.");
       router.push("/admin");
       router.refresh();
     } catch (err) {
-      setError("Gagal menyimpan: " + pesanError(err));
+      const pesan = "Gagal menyimpan: " + pesanError(err);
+      setError(pesan);
+      toast(pesan, "error");
       setSaving(false);
     }
   }
@@ -188,23 +200,17 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
         <h1 className="text-2xl font-extrabold tracking-tight">{promoId ? "Edit promo" : "Tambah promo"}</h1>
 
         <div>
-          <label className="label" htmlFor="kategori">
+          <span className="label">
             Kategori <span className="text-red-600">*</span>
-          </label>
-          <select
-            id="kategori"
+          </span>
+          <Dropdown
+            variant="field"
+            label="Kategori"
+            placeholder="Pilih kategori…"
             value={kategoriId}
-            onChange={(e) => setKategoriId(e.target.value)}
-            required
-            className="input"
-          >
-            <option value="">Pilih kategori...</option>
-            {kategoriList.map((k) => (
-              <option key={k.nama} value={k.nama}>
-                {k.nama}
-              </option>
-            ))}
-          </select>
+            onChange={setKategoriId}
+            opsi={kategoriList.map((k) => ({ value: k.nama, label: k.nama, warna: k.warna ?? undefined }))}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -267,7 +273,7 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
 
         <div>
           <label className="label" htmlFor="deskripsi">
-            Deskripsi
+            Nama Promo
           </label>
           <textarea
             id="deskripsi"
@@ -276,7 +282,39 @@ export default function PromoForm({ promoId }: { promoId?: string }) {
             rows={4}
             className="input"
           />
-          <p className="hint">Isi deskripsi agar promo mudah dicari.</p>
+          <p className="hint">Isi nama promo agar promo mudah dicari.</p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="link">
+            Link
+          </label>
+          <input
+            id="link"
+            type="text"
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://www.informa.co.id/..."
+            className="input"
+          />
+          <p className="hint">
+            {urlAman(link) && (
+              <>
+                {" "}
+                <a
+                  href={urlAman(link) ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-ink underline underline-offset-2"
+                >
+                  Tes link <ExternalLink className="size-3" />
+                </a>
+              </>
+            )}
+          </p>
         </div>
 
         <div>

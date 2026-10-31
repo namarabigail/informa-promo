@@ -2,14 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, ImageOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, ExternalLink, Globe, ImageOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { getSupabase } from "@/lib/supabase-browser";
 import SearchBar from "@/components/SearchBar";
+import { useFeedback } from "@/components/Feedback";
+import { teksLink, urlAman } from "@/lib/promo";
 import { latar } from "@/lib/tema";
 import {
   formatTanggal,
   formatWaktu,
   gambarUrl,
+  namaPengguna,
   pesanError,
   selisihHari,
   statusPromo,
@@ -35,6 +38,7 @@ const WARNA_BANNER = {
 };
 
 export default function AdminPage() {
+  const { toast, konfirmasi } = useFeedback();
   const [promos, setPromos] = useState<PromoRow[]>([]);
   const [kategori, setKategori] = useState<Kategori[]>([]);
   const [zona, setZona] = useState<Zona[]>([]);
@@ -50,7 +54,7 @@ export default function AdminPage() {
     let batal = false;
     const sb = getSupabase();
     Promise.all([
-      sb.from("promo").select("id,kategori,department,deskripsi,mulai,berakhir,gambar_path,updated_by,updated_at"),
+      sb.from("promo").select("id,kategori,department,deskripsi,mulai,berakhir,gambar_path,link,updated_by,updated_at"),
       sb.from("kategori").select("nama,warna,urutan"),
       sb.from("zona").select("id,nama,urutan").order("urutan"),
       sb.from("promo_zona").select("promo_id,zona_id"),
@@ -145,7 +149,7 @@ export default function AdminPage() {
       banners.push({
         key: "kurang",
         warna: "abu",
-        teks: `${kurang.length} promo belum ada gambar atau deskripsi.`,
+        teks: `${kurang.length} promo belum ada gambar atau nama promo.`,
         ids: ids(kurang),
       });
     }
@@ -180,14 +184,23 @@ export default function AdminPage() {
   }
 
   async function hapus(id: string, label: string) {
-    if (!confirm(`Hapus promo "${label}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const ya = await konfirmasi({
+      judul: "Hapus promo ini?",
+      pesan: `“${label}” akan dihapus permanen dan tidak bisa dikembalikan.`,
+      ya: "Hapus",
+      bahaya: true,
+    });
+    if (!ya) return;
+
     const sb = getSupabase();
     const r1 = await sb.from("promo_zona").delete().eq("promo_id", id);
-    if (r1.error) return alert("Gagal menghapus: " + pesanError(r1.error));
+    if (r1.error) return toast("Gagal menghapus: " + pesanError(r1.error), "error");
     const r2 = await sb.from("promo").delete().eq("id", id);
-    if (r2.error) return alert("Gagal menghapus: " + pesanError(r2.error));
+    if (r2.error) return toast("Gagal menghapus: " + pesanError(r2.error), "error");
+
     setFokus(null);
     setVersi((v) => v + 1);
+    toast("Promo berhasil dihapus.");
   }
 
   const FILTER_STATUS: { v: "semua" | Status; label: string }[] = [
@@ -201,9 +214,14 @@ export default function AdminPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight">Dashboard Promo</h1>
-        <Link href="/admin/promo/new" className="btn btn-primary">
-          <Plus className="size-4" /> Tambah promo
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/" target="_blank" rel="noreferrer" className="btn btn-ghost">
+            <Globe className="size-4" /> Kembali ke halaman promo
+          </Link>
+          <Link href="/admin/promo/new" className="btn btn-primary">
+            <Plus className="size-4" /> Tambah promo
+          </Link>
+        </div>
       </div>
 
       {error && <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">Gagal memuat data: {error}</p>}
@@ -269,7 +287,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          <SearchBar value={q} onChange={setQ} placeholder="Cari kategori, department, deskripsi, zona…" />
+          <SearchBar value={q} onChange={setQ} placeholder="Cari kategori, department, nama promo, zona…" />
 
           <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             {FILTER_STATUS.map((f) => (
@@ -313,17 +331,18 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <p className="line-clamp-2 whitespace-pre-line font-semibold leading-snug">
-                        {r.deskripsi ?? "(tanpa deskripsi)"}
+                        {r.deskripsi ?? "(tanpa nama promo)"}
                       </p>
                       <p className="text-xs text-muted">
                         {r.zonaText} · {r.department ?? "tanpa department"}
                       </p>
+                      <TautanKecil link={r.link} />
                       <p className="text-xs text-muted">
                         {formatTanggal(r.mulai)} – {r.berakhir ? formatTanggal(r.berakhir) : "persediaan habis"}
                       </p>
                       <p className="text-[11px] text-muted">
                         Update {formatWaktu(r.updated_at)}
-                        {r.updated_by ? ` oleh ${r.updated_by}` : ""}
+                        {r.updated_by ? ` oleh ${namaPengguna(r.updated_by)}` : ""}
                       </p>
                     </div>
                   </div>
@@ -332,7 +351,7 @@ export default function AdminPage() {
                     <Link href={`/admin/promo/${r.id}`} className="btn btn-ghost flex-1">
                       <Pencil className="size-4" /> Edit
                     </Link>
-                    <button type="button" onClick={() => hapus(r.id, r.kategori)} className="btn btn-danger flex-1">
+                    <button type="button" onClick={() => hapus(r.id, (r.deskripsi ?? r.kategori).split("\n")[0].slice(0, 60))} className="btn btn-danger flex-1">
                       <Trash2 className="size-4" /> Hapus
                     </button>
                   </div>
@@ -343,5 +362,22 @@ export default function AdminPage() {
         </>
       )}
     </div>
+  );
+}
+
+// Link promo di daftar admin (bisa diklik untuk mengecek)
+function TautanKecil({ link }: { link: string | null }) {
+  const href = urlAman(link);
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex max-w-full items-center gap-1 text-xs font-medium underline underline-offset-2"
+    >
+      <ExternalLink className="size-3 shrink-0" />
+      <span className="truncate">{teksLink(href)}</span>
+    </a>
   );
 }
